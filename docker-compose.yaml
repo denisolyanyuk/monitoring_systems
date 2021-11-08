@@ -1,0 +1,83 @@
+
+version: "3.7"
+
+services:
+  influxdb:
+    image: influxdb:2.0.9
+    container_name: influxdb
+    ports:
+      - "8083:8083"
+      - "8086:8086"
+      - "8090:8090"
+      - "2003:2003"
+    env_file:
+      - "env.influx_telegraf"
+    volumes:
+        - ./data/docker/influxdb/data:/var/lib/influxdb2
+
+
+  telegraf:
+    image: telegraf:1.20.3
+    container_name: telegraf
+
+    # https://medium.com/redbubble/running-a-docker-container-as-a-non-root-user-7d2e00f8ee15
+    # when running new container, user inside that container would not have permissions to docker socket
+    # TODO fix it
+    user: 1000:1000
+    env_file:
+      - "env.influx_telegraf"
+    links:
+      - influxdb
+    volumes:
+      - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  grafana:
+    image: grafana/grafana:8.2.3
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    env_file:
+      - "env.grafana"
+    user: "0"
+    links:
+      - influxdb
+    volumes:
+      - ./data/docker/grafana/data:/var/lib/grafana
+
+
+  mongodb:
+    image: mongo:5.0.0
+    container_name: mongodb
+    restart: on-failure
+    ports:
+      - 27017:27017
+    volumes:
+      - ./data/docker/mongo/data:/data/db
+
+  elasticsearch:
+    image: elasticsearch:7.14.2
+    container_name: elasticsearch
+    ports:
+      - 9200:9200
+      - 9300:9300
+    volumes:
+      - ./data/docker/elasticsearch/data:/usr/share/elasticsearch/data
+    environment:
+      - discovery.type=single-node
+      - node.name=elasticsearch_node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+
+
+  web:
+    build: ./djano_pj
+    command: python manage.py runserver 0.0.0.0:8000
+    container_name: web
+    volumes:
+      - .:/django_pj
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongodb
+      - elasticsearch
+
