@@ -13,36 +13,15 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-import random
 
 from django.contrib import admin
 from django.urls import path
-import pymongo
-from django.http import HttpResponse
-import json
 
-myclient = pymongo.MongoClient("mongodb://mongodb:27017/")
-mydb = myclient["mydatabase"]
-customers = mydb["customers"]
-
-customers_amount = 200
-
-
-def create_users(request):
-    for i in range(customers_amount):
-        customers.insert_one({"name": "John", "second_name": "Dou", "cust_id": f"{i}"})
-    return HttpResponse('')
-
-
-def get_user(request):
-    customer = customers.find_one({"cust_id": f"{random.randint(0, customers_amount-1)}"})
-    customer.pop('_id')
-    jsondata = json.dumps(customer)
-    return HttpResponse(jsondata)
-
+from .views import create_all_users, get_random_user, update_random_user
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('create_users', create_users),
-    path('get_user', get_user),
+    path('create_all_users', create_all_users),
+    path('get_random_user', get_random_user),
+    path('update_random_user', update_random_user),
 ]
